@@ -284,9 +284,7 @@ app.get('/proxy', async (req, res) => {
       response.data.pipe(res);
     }
   } catch (error) {
-    if (error.response && error.response.status === 403) {
-      return res.status(403).json({ error: 'Access forbidden - CDN blocked the request' });
-    }
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
