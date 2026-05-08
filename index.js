@@ -146,203 +146,298 @@ app.get('/m3u8', async (req, res) => {
 app.get('/proxy', async (req, res) => {
   try {
     const { url, referer: customReferer } = req.query;
+
     if (!url) {
       return res.status(400).json({
-        error: 'Query parameter "url" is required',
-        usage: 'GET /proxy?url=<m3u8-or-ts-url>&referer=<optional-referer>',
-        example: '/proxy?url=https://example.com/video.m3u8&referer=https://kwik.si/'
+        error: 'Query parameter "url" is required'
       });
     }
 
-    // Automatically resolve Kwik URLs
-    if (url.includes('kwik.cx/e/') || url.includes('kwik.si/e/') || url.match(/kwik\.[a-z]+\/e\//)) {
+    // Auto resolve Kwik links
+    if (
+      url.includes('kwik.cx/e/') ||
+      url.includes('kwik.si/e/') ||
+      url.match(/kwik\.[a-z]+\/e\//)
+    ) {
+
       try {
-        const result = await pahe.resolveKwikWithNode(url);
-        const redirectUrl = `/proxy?url=${encodeURIComponent(result.m3u8)}&referer=${encodeURIComponent(result.referer)}`;
-        return res.redirect(302, redirectUrl);
+
+        const result =
+          await pahe.resolveKwikWithNode(url);
+
+        return res.redirect(
+          302,
+          `/proxy?url=${encodeURIComponent(result.m3u8)}&referer=${encodeURIComponent(result.referer)}`
+        );
+
       } catch (e) {
-        console.error('Failed to auto-resolve Kwik URL:', e);
-        return res.status(500).json({ error: 'Failed to resolve Kwik URL', details: e.message });
+
+        console.error(e);
+
+        return res.status(500).json({
+          error: 'Failed to resolve Kwik URL'
+        });
       }
     }
 
-    const axios = require('axios');
-    const urlObj = new URL(url);
-    const referer = customReferer || `${urlObj.protocol}//${urlObj.host}/`;
+    const axios =
+      require('axios');
 
-    // Fetch the content with proper headers
+    const urlObj =
+      new URL(url);
+
+    const referer =
+      customReferer ||
+      `${urlObj.protocol}//${urlObj.host}/`;
+
     const isKeyRequest =
-    url.includes('.key');
-    const response = await axios.get(url, {
-      withCredentials: true,
-      decompress: false,
-      headers: {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+      url.includes('.key');
 
-  'Referer': referer,
+    const response =
+      await axios.get(url, {
 
-  'Origin':
-    new URL(referer).origin,
+        withCredentials: true,
 
-  'Accept':
-    isKeyRequest
-      ? 'application/octet-stream,*/*'
-      : '*/*',
+        decompress: false,
 
-  'Accept-Language':
-    'en-US,en;q=0.9',
+        headers: {
 
-  'Cache-Control':
-    'no-cache',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
 
-  'Pragma':
-    'no-cache',
+          'Referer':
+            referer,
 
-  'Sec-Ch-Ua':
-    '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+          'Origin':
+            new URL(referer).origin,
 
-  'Sec-Ch-Ua-Mobile':
-    '?0',
+          'Accept':
+            isKeyRequest
+              ? 'application/octet-stream,*/*'
+              : '*/*',
 
-  'Sec-Ch-Ua-Platform':
-    '"Windows"',
+          'Accept-Language':
+            'en-US,en;q=0.9',
 
-  'Sec-Fetch-Dest':
-    isKeyRequest
-      ? 'empty'
-      : 'video',
+          'Cache-Control':
+            'no-cache',
 
-  'Sec-Fetch-Mode':
-    'cors',
+          'Pragma':
+            'no-cache',
 
-  'Sec-Fetch-Site':
-    'cross-site',
+          'Sec-Ch-Ua':
+            '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
 
-  'Connection':
-    'keep-alive'
-},
-      responseType: 'stream',
-      timeout: 30000,
-      maxRedirects: 5,
-      validateStatus: function (status) {
-        return status >= 200 && status < 500;
-      }
-    });
+          'Sec-Ch-Ua-Mobile':
+            '?0',
 
-    const contentType = response.headers['content-type'] ||
-                       (url.includes('.m3u8') ? 'application/vnd.apple.mpegurl' :
-                        url.includes('.ts') ? 'video/mp2t' : 'application/octet-stream');
+          'Sec-Ch-Ua-Platform':
+            '"Windows"',
 
+          'Sec-Fetch-Dest':
+            isKeyRequest
+              ? 'empty'
+              : 'video',
+
+          'Sec-Fetch-Mode':
+            'cors',
+
+          'Sec-Fetch-Site':
+            'cross-site',
+
+          'Connection':
+            'keep-alive',
+
+          'Range':
+            req.headers.range || 'bytes=0-'
+        },
+
+        responseType: 'stream',
+
+        timeout: 30000,
+
+        maxRedirects: 5,
+
+        validateStatus: status =>
+          status >= 200 &&
+          status < 500
+      });
+
+    const contentType =
+      response.headers['content-type'] ||
+      (
+        url.includes('.m3u8')
+          ? 'application/vnd.apple.mpegurl'
+          : url.includes('.ts')
+          ? 'video/mp2t'
+          : 'application/octet-stream'
+      );
+
+    // Handle playlists
     if (
-  contentType.includes('mpegurl') ||
-  url.includes('.m3u8')
-) {
+      contentType.includes('mpegurl') ||
+      url.includes('.m3u8')
+    ) {
 
-  const playlistReferer =
-    referer;
+      let content = '';
 
-  let content = '';
-      response.data.on('data', chunk => { content += chunk.toString(); });
+      response.data.on('data', chunk => {
+        content += chunk.toString();
+      });
+
       response.data.on('end', () => {
+
         const baseUrl =
-  url.substring(
-    0,
-    url.lastIndexOf('/') + 1
-  );
+          url.substring(
+            0,
+            url.lastIndexOf('/') + 1
+          );
 
-// ALWAYS use current request referer
-// to avoid stale HLS referers
-const playlistReferer =
-  `&referer=${encodeURIComponent(playlistReferer)}`;
+        // IMPORTANT:
+        // keep one stable referer
+        const playlistReferer =
+          referer;
 
-const modified =
-  content
-    .split('\n')
-    .map(line => {
+        const refererParam =
+          `&referer=${encodeURIComponent(playlistReferer)}`;
 
-      const t =
-        line.trim();
+        const modified =
+          content
+            .split('\n')
+            .map(line => {
 
-      // Handle HLS tags
-      if (t.startsWith('#')) {
+              const t =
+                line.trim();
 
-        // Rewrite AES key URLs
-        if (t.includes('URI="')) {
+              // HLS tags
+              if (t.startsWith('#')) {
 
-          return t.replace(
-            /URI="([^"]+)"/,
-            (match, uri) => {
+                // Rewrite AES key URIs
+                if (t.includes('URI="')) {
 
-              let fullUrl = uri;
+                  return t.replace(
+                    /URI="([^"]+)"/,
+                    (match, uri) => {
 
-              if (!uri.startsWith('http')) {
-                fullUrl =
-                  baseUrl + uri;
+                      let fullUrl =
+                        uri;
+
+                      if (!uri.startsWith('http')) {
+                        fullUrl =
+                          baseUrl + uri;
+                      }
+
+                      return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}${refererParam}"`;
+                    }
+                  );
+                }
+
+                return line;
               }
 
-              return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}${refererParam}"`;
-            }
-          );
-        }
+              // Relative chunk URLs
+              if (
+                t &&
+                !t.startsWith('http')
+              ) {
 
-        return line;
-      }
+                return `https://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}${refererParam}`;
+              }
 
-      // Relative TS/chunk URLs
-      if (
-        t &&
-        !t.startsWith('http')
-      ) {
+              // Absolute chunk URLs
+              if (
+                t.startsWith('http')
+              ) {
 
-        return `https://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}${refererParam}`;
-      }
+                return `https://${req.get('host')}/proxy?url=${encodeURIComponent(t)}${refererParam}`;
+              }
 
-      // Absolute URLs
-      if (
-        t.startsWith('http')
-      ) {
+              return line;
 
-        return `https://${req.get('host')}/proxy?url=${encodeURIComponent(t)}${refererParam}`;
-      }
+            })
+            .join('\n');
 
-      return line;
+        console.log(
+          '[M3U8 REWRITE]',
+          {
+            url,
+            referer
+          }
+        );
 
-    })
-    .join('\n');
+        res.setHeader(
+          'Content-Type',
+          contentType
+        );
 
-console.log(
-  '[M3U8 REWRITE]',
-  {
-    url,
-    referer
-  }
-);
+        res.setHeader(
+          'Access-Control-Allow-Origin',
+          '*'
+        );
 
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Access-Control-Allow-Origin', '*');
         res.send(modified);
+
       });
+
     } else {
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Accept-Ranges', 'bytes');
-      if (response.headers['content-length']) res.setHeader('Content-Length', response.headers['content-length']);
-      if (response.headers['content-range']) res.setHeader('Content-Range', response.headers['content-range']);
+
+      // Stream TS / KEY files
+      res.setHeader(
+        'Content-Type',
+        contentType
+      );
+
+      res.setHeader(
+        'Access-Control-Allow-Origin',
+        '*'
+      );
+
+      res.setHeader(
+        'Accept-Ranges',
+        'bytes'
+      );
+
+      if (response.headers['content-length']) {
+        res.setHeader(
+          'Content-Length',
+          response.headers['content-length']
+        );
+      }
+
+      if (response.headers['content-range']) {
+        res.setHeader(
+          'Content-Range',
+          response.headers['content-range']
+        );
+      }
 
       res.status(response.status);
-      response.data.on('error', (err) => {
-        console.error(
-          'Stream pipe error:',
-          err
-        );
-      });
-      
+
+      response.data.on(
+        'error',
+        err => {
+          console.error(
+            'Stream pipe error:',
+            err
+          );
+        }
+      );
+
       response.data.pipe(res);
     }
+
   } catch (error) {
+
     console.error(error);
-    res.status(500).json({ error: error.message });
+
+    res.setHeader(
+      'Access-Control-Allow-Origin',
+      '*'
+    );
+
+    res.status(500).json({
+      error: error.message
+    });
   }
 });
 
