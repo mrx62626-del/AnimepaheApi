@@ -187,10 +187,8 @@ app.get('/proxy', async (req, res) => {
       new URL(url);
 
     const referer =
-    typeof customReferer === 'string' &&
-    customReferer.trim()
-      ? decodeURIComponent(customReferer)
-      : `${urlObj.protocol}//${urlObj.host}/`;
+    const referer =
+    `${urlObj.protocol}//${urlObj.host}/`;
 
     const isKeyRequest =
       url.includes('.key');
@@ -297,75 +295,62 @@ app.get('/proxy', async (req, res) => {
 
         // IMPORTANT:
         // keep one stable referer
-       const playlistReferer =
-        decodeURIComponent(referer);
+       const modified =
+  content
+    .split('\n')
+    .map(line => {
 
-        const refererParam =
-          `&referer=${encodeURIComponent(playlistReferer)}`;
+      const t =
+        line.trim();
 
-        const modified =
-          content
-            .split('\n')
-            .map(line => {
+      // HLS tags
+      if (t.startsWith('#')) {
 
-              const t =
-                line.trim();
+        // Rewrite AES key URIs
+        if (t.includes('URI="')) {
 
-              // HLS tags
-              if (t.startsWith('#')) {
+          return t.replace(
+            /URI="([^"]+)"/,
+            (match, uri) => {
 
-                // Rewrite AES key URIs
-                if (t.includes('URI="')) {
+              let fullUrl =
+                uri;
 
-                  return t.replace(
-                    /URI="([^"]+)"/,
-                    (match, uri) => {
-
-                      let fullUrl =
-                        uri;
-
-                      if (!uri.startsWith('http')) {
-                        fullUrl =
-                          baseUrl + uri;
-                      }
-
-                      return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}${refererParam}"`;
-                    }
-                  );
-                }
-
-                return line;
+              if (!uri.startsWith('http')) {
+                fullUrl =
+                  baseUrl + uri;
               }
 
-              // Relative chunk URLs
-              if (
-                t &&
-                !t.startsWith('http')
-              ) {
+              return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}"`;
+            }
+          );
+        }
 
-                return `https://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}${refererParam}`;
-              }
+        return line;
+      }
 
-              // Absolute chunk URLs
-              if (
-                t.startsWith('http')
-              ) {
+      // Relative chunk URLs
+      if (
+        t &&
+        !t.startsWith('http')
+      ) {
 
-                return `https://${req.get('host')}/proxy?url=${encodeURIComponent(t)}${refererParam}`;
-              }
+        return `https://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}`;
+      }
 
-              return line;
+      // Absolute chunk URLs
+      if (
+        t.startsWith('http')
+      ) {
 
-            })
-            .join('\n');
+        return `https://${req.get('host')}/proxy?url=${encodeURIComponent(t)}`;
+      }
 
-        console.log(
-          '[M3U8 REWRITE]',
-          {
-            url,
-            referer
-          }
-        );
+      return line;
+
+    })
+    .join('\n');
+
 
         res.setHeader(
           'Content-Type',
