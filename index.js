@@ -187,8 +187,10 @@ app.get('/proxy', async (req, res) => {
       new URL(url);
 
     const referer =
-      customReferer ||
-      `${urlObj.protocol}//${urlObj.host}/`;
+    typeof customReferer === 'string' &&
+    customReferer.trim()
+      ? decodeURIComponent(customReferer)
+      : `${urlObj.protocol}//${urlObj.host}/`;
 
     const isKeyRequest =
       url.includes('.key');
@@ -295,8 +297,8 @@ app.get('/proxy', async (req, res) => {
 
         // IMPORTANT:
         // keep one stable referer
-        const playlistReferer =
-          referer;
+       const playlistReferer =
+        decodeURIComponent(referer);
 
         const refererParam =
           `&referer=${encodeURIComponent(playlistReferer)}`;
