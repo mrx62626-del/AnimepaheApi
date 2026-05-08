@@ -187,7 +187,6 @@ app.get('/proxy', async (req, res) => {
       new URL(url);
 
     const referer =
-    const referer =
     `${urlObj.protocol}//${urlObj.host}/`;
 
     const isKeyRequest =
