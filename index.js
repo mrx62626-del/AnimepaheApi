@@ -238,29 +238,79 @@ app.get('/proxy', async (req, res) => {
       let content = '';
       response.data.on('data', chunk => { content += chunk.toString(); });
       response.data.on('end', () => {
-        const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
-        const refererParam = customReferer ? `&referer=${encodeURIComponent(customReferer)}` : '';
-        const modified = content.split('\n').map(line => {
-          const t = line.trim();
-          if (t.startsWith('#')) {
-            // Rewrite URIs in tags like #EXT-X-KEY:METHOD=AES-128,URI="..."
-            if (t.includes('URI="')) {
-              return t.replace(/URI="([^"]+)"/, (match, uri) => {
-                let fullUrl = uri;
-                if (!uri.startsWith('http')) {
-                  fullUrl = baseUrl + uri;
-                }
-                return `URI="/proxy?url=${encodeURIComponent(fullUrl)}${refererParam}"`;
-              });
+        const baseUrl =
+  url.substring(
+    0,
+    url.lastIndexOf('/') + 1
+  );
+
+// ALWAYS use current request referer
+// to avoid stale HLS referers
+const refererParam =
+  `&referer=${encodeURIComponent(referer)}`;
+
+const modified =
+  content
+    .split('\n')
+    .map(line => {
+
+      const t =
+        line.trim();
+
+      // Handle HLS tags
+      if (t.startsWith('#')) {
+
+        // Rewrite AES key URLs
+        if (t.includes('URI="')) {
+
+          return t.replace(
+            /URI="([^"]+)"/,
+            (match, uri) => {
+
+              let fullUrl = uri;
+
+              if (!uri.startsWith('http')) {
+                fullUrl =
+                  baseUrl + uri;
+              }
+
+              return `URI="${req.protocol}://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}${refererParam}"`;
             }
-            return line;
-          } else if (t && !t.startsWith('http')) {
-            return `/proxy?url=${encodeURIComponent(baseUrl + t)}${refererParam}`;
-          } else if (t.startsWith('http')) {
-            return `/proxy?url=${encodeURIComponent(t)}${refererParam}`;
-          }
-          return line;
-        }).join('\n');
+          );
+        }
+
+        return line;
+      }
+
+      // Relative TS/chunk URLs
+      if (
+        t &&
+        !t.startsWith('http')
+      ) {
+
+        return `${req.protocol}://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}${refererParam}`;
+      }
+
+      // Absolute URLs
+      if (
+        t.startsWith('http')
+      ) {
+
+        return `${req.protocol}://${req.get('host')}/proxy?url=${encodeURIComponent(t)}${refererParam}`;
+      }
+
+      return line;
+
+    })
+    .join('\n');
+
+console.log(
+  '[M3U8 REWRITE]',
+  {
+    url,
+    referer
+  }
+);
 
         res.setHeader('Content-Type', contentType);
         res.setHeader('Access-Control-Allow-Origin', '*');
