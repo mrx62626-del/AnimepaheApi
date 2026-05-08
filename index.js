@@ -172,10 +172,11 @@ app.get('/proxy', async (req, res) => {
 
     // Fetch the content with proper headers
     const response = await axios.get(url, {
+      decompress: false,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Referer': referer,
-        'Origin': referer.slice(0, -1),
+        'Origin': new URL(referer).origin,
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
@@ -191,13 +192,6 @@ app.get('/proxy', async (req, res) => {
         return status >= 200 && status < 500;
       }
     });
-
-    if (response.status === 403) {
-      return res.status(403).json({
-        error: 'Access forbidden - CDN blocked the request',
-        url: url
-      });
-    }
 
     const contentType = response.headers['content-type'] ||
                        (url.includes('.m3u8') ? 'application/vnd.apple.mpegurl' :
@@ -243,6 +237,13 @@ app.get('/proxy', async (req, res) => {
       if (response.headers['content-range']) res.setHeader('Content-Range', response.headers['content-range']);
 
       res.status(response.status);
+      response.data.on('error', (err) => {
+        console.error(
+          'Stream pipe error:',
+          err
+        );
+      });
+      
       response.data.pipe(res);
     }
   } catch (error) {
