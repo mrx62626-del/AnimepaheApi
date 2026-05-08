@@ -234,8 +234,15 @@ app.get('/proxy', async (req, res) => {
                        (url.includes('.m3u8') ? 'application/vnd.apple.mpegurl' :
                         url.includes('.ts') ? 'video/mp2t' : 'application/octet-stream');
 
-    if (contentType.includes('mpegurl') || url.includes('.m3u8')) {
-      let content = '';
+    if (
+  contentType.includes('mpegurl') ||
+  url.includes('.m3u8')
+) {
+
+  const playlistReferer =
+    referer;
+
+  let content = '';
       response.data.on('data', chunk => { content += chunk.toString(); });
       response.data.on('end', () => {
         const baseUrl =
@@ -246,8 +253,8 @@ app.get('/proxy', async (req, res) => {
 
 // ALWAYS use current request referer
 // to avoid stale HLS referers
-const refererParam =
-  `&referer=${encodeURIComponent(referer)}`;
+const playlistReferer =
+  `&referer=${encodeURIComponent(playlistReferer)}`;
 
 const modified =
   content
