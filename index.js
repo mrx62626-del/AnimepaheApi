@@ -251,7 +251,10 @@ app.get('/proxy', async (req, res) => {
             req.headers.range || 'bytes=0-'
         },
 
-        responseType: 'stream',
+        responseType:
+          url.includes('.m3u8')
+            ? 'text'
+            : 'stream',
 
         timeout: 30000,
 
@@ -273,119 +276,114 @@ app.get('/proxy', async (req, res) => {
       );
 
     // Handle playlists
-    if (
-      contentType.includes('mpegurl') ||
-      url.includes('.m3u8')
-    ) {
+if (
+  contentType.includes('mpegurl') ||
+  url.includes('.m3u8')
+) {
 
-      let content = '';
+  const content =
+    response.data;
 
-      response.data.on('data', chunk => {
-        content += chunk.toString();
-      });
+  console.log(
+    '[M3U8 CONTENT]',
+    String(content).slice(0, 200)
+  );
 
-      response.data.on('end', () => {
+  const baseUrl =
+    url.substring(
+      0,
+      url.lastIndexOf('/') + 1
+    );
 
-        const baseUrl =
-          url.substring(
-            0,
-            url.lastIndexOf('/') + 1
-          );
+  const modified =
+    String(content)
+      .split('\n')
+      .map(line => {
 
-        // IMPORTANT:
-        // keep one stable referer
-       const modified =
-  content
-    .split('\n')
-    .map(line => {
+        const t =
+          line.trim();
 
-      const t =
-        line.trim();
+        // HLS tags
+        if (t.startsWith('#')) {
 
-      // HLS tags
-      if (t.startsWith('#')) {
+          // Rewrite AES key URIs
+          if (t.includes('URI="')) {
 
-        // Rewrite AES key URIs
-        if (t.includes('URI="')) {
+            return t.replace(
+              /URI="([^"]+)"/,
+              (match, uri) => {
 
-          return t.replace(
-            /URI="([^"]+)"/,
-            (match, uri) => {
+                let fullUrl =
+                  uri;
 
-              let fullUrl =
-                uri;
+                if (!uri.startsWith('http')) {
+                  fullUrl =
+                    baseUrl + uri;
+                }
 
-              if (!uri.startsWith('http')) {
-                fullUrl =
-                  baseUrl + uri;
+                return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}"`;
               }
+            );
+          }
 
-              return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}"`;
-            }
-          );
+          return line;
+        }
+
+        // Relative chunk URLs
+        if (
+          t &&
+          !t.startsWith('http')
+        ) {
+
+          return `https://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}`;
+        }
+
+        // Absolute chunk URLs
+        if (
+          t.startsWith('http')
+        ) {
+
+          return `https://${req.get('host')}/proxy?url=${encodeURIComponent(t)}`;
         }
 
         return line;
-      }
 
-      // Relative chunk URLs
-      if (
-        t &&
-        !t.startsWith('http')
-      ) {
+      })
+      .join('\n');
 
-        return `https://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}`;
-      }
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.apple.mpegurl'
+  );
 
-      // Absolute chunk URLs
-      if (
-        t.startsWith('http')
-      ) {
+  res.setHeader(
+    'Access-Control-Allow-Origin',
+    '*'
+  );
 
-        return `https://${req.get('host')}/proxy?url=${encodeURIComponent(t)}`;
-      }
+  res.setHeader(
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate, proxy-revalidate'
+  );
 
-      return line;
+  res.setHeader(
+    'Pragma',
+    'no-cache'
+  );
 
-    })
-    .join('\n');
+  res.setHeader(
+    'Expires',
+    '0'
+  );
 
+  res.setHeader(
+    'Surrogate-Control',
+    'no-store'
+  );
 
-        res.setHeader(
-          'Content-Type',
-          contentType
-        );
+  res.send(modified);
 
-        res.setHeader(
-  'Access-Control-Allow-Origin',
-  '*'
-);
-
-res.setHeader(
-  'Cache-Control',
-  'no-store, no-cache, must-revalidate, proxy-revalidate'
-);
-
-res.setHeader(
-  'Pragma',
-  'no-cache'
-);
-
-res.setHeader(
-  'Expires',
-  '0'
-);
-
-res.setHeader(
-  'Surrogate-Control',
-  'no-store'
-);
-
-res.send(modified);
-
-      });
-
-    } else {
+} else {
 
       // Stream TS / KEY files
       res.setHeader(
