@@ -171,20 +171,57 @@ app.get('/proxy', async (req, res) => {
     const referer = customReferer || `${urlObj.protocol}//${urlObj.host}/`;
 
     // Fetch the content with proper headers
+    const isKeyRequest =
+    url.includes('.key');
     const response = await axios.get(url, {
+      withCredentials: true,
       decompress: false,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': referer,
-        'Origin': new URL(referer).origin,
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'cross-site'
-      },
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+
+  'Referer': referer,
+
+  'Origin':
+    new URL(referer).origin,
+
+  'Accept':
+    isKeyRequest
+      ? 'application/octet-stream,*/*'
+      : '*/*',
+
+  'Accept-Language':
+    'en-US,en;q=0.9',
+
+  'Cache-Control':
+    'no-cache',
+
+  'Pragma':
+    'no-cache',
+
+  'Sec-Ch-Ua':
+    '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+
+  'Sec-Ch-Ua-Mobile':
+    '?0',
+
+  'Sec-Ch-Ua-Platform':
+    '"Windows"',
+
+  'Sec-Fetch-Dest':
+    isKeyRequest
+      ? 'empty'
+      : 'video',
+
+  'Sec-Fetch-Mode':
+    'cors',
+
+  'Sec-Fetch-Site':
+    'cross-site',
+
+  'Connection':
+    'keep-alive'
+},
       responseType: 'stream',
       timeout: 30000,
       maxRedirects: 5,
