@@ -274,7 +274,7 @@ const modified =
                   baseUrl + uri;
               }
 
-              return `URI="${req.protocol}://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}${refererParam}"`;
+              return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}${refererParam}"`;
             }
           );
         }
@@ -288,7 +288,7 @@ const modified =
         !t.startsWith('http')
       ) {
 
-        return `${req.protocol}://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}${refererParam}`;
+        return `https://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}${refererParam}`;
       }
 
       // Absolute URLs
@@ -296,7 +296,7 @@ const modified =
         t.startsWith('http')
       ) {
 
-        return `${req.protocol}://${req.get('host')}/proxy?url=${encodeURIComponent(t)}${refererParam}`;
+        return `https://${req.get('host')}/proxy?url=${encodeURIComponent(t)}${refererParam}`;
       }
 
       return line;
