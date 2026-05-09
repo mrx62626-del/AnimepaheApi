@@ -396,13 +396,58 @@ app.use((err, req, res, next) => {
   });
 });
 
+app.get('/player', (req, res) => {
+
+  const kwikUrl =
+    req.query.url;
+
+  if (!kwikUrl) {
+    return res
+      .status(400)
+      .send('Missing URL');
+  }
+
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+html,body,iframe{
+margin:0;
+padding:0;
+width:100%;
+height:100%;
+border:0;
+background:#000;
+overflow:hidden;
+}
+</style>
+</head>
+<body>
+
+<iframe
+  src="${kwikUrl}"
+  allowfullscreen
+  allow="autoplay; fullscreen"
+  frameborder="0"
+  scrolling="no"
+  style="width:100%;height:100%;border:0;"
+></iframe>
+
+</body>
+</html>
+  `);
+});
+
 // Export for Vercel
 module.exports = app;
 
 // Start server if not in Vercel environment
 if (require.main === module) {
+
   app.listen(PORT, () => {
     console.log(`Animepahe API server running on port ${PORT}`);
   });
-  
+
 }
