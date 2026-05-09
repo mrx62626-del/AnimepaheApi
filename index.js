@@ -260,7 +260,7 @@ if (isKeyRequest) {
     responseType:
       url.includes('.m3u8')
         ? 'text'
-        : 'stream',
+        : 'arraybuffer',
 
     timeout: 30000,
 
@@ -420,17 +420,29 @@ if (
 
       res.status(response.status);
 
-      response.data.on(
-        'error',
-        err => {
-          console.error(
-            'Stream pipe error:',
-            err
-          );
-        }
-      );
+    const chunks = [];
 
-      response.data.pipe(res);
+response.data.on('data', chunk => {
+  chunks.push(chunk);
+});
+
+response.data.on('end', () => {
+
+  const buffer =
+    Buffer.concat(chunks);
+
+  res.end(buffer);
+});
+
+response.data.on('error', err => {
+
+  console.error(
+    'Stream pipe error:',
+    err
+  );
+
+  res.end();
+});
 
   } catch (error) {
 
