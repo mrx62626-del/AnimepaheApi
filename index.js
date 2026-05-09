@@ -208,9 +208,6 @@ app.get('/proxy', async (req, res) => {
           'Referer':
             referer,
 
-          'Origin':
-            new URL(referer).origin,
-
           'Accept':
             isKeyRequest
               ? 'application/octet-stream,*/*'
