@@ -279,10 +279,70 @@ app.get('/proxy', async (req, res) => {
     // Handle playlists
 
     // Directly return playlists
+// Rewrite playlists
 if (
   contentType.includes('mpegurl') ||
   url.includes('.m3u8')
 ) {
+
+  const content =
+    String(response.data);
+
+  const baseUrl =
+    url.substring(
+      0,
+      url.lastIndexOf('/') + 1
+    );
+
+  const modified =
+    content
+      .split('\n')
+      .map(line => {
+
+        const t =
+          line.trim();
+
+        // Rewrite AES key URLs
+        if (
+          t.includes('URI="')
+        ) {
+
+          return t.replace(
+            /URI="([^"]+)"/,
+            (_, uri) => {
+
+              const full =
+                uri.startsWith('http')
+                  ? uri
+                  : baseUrl + uri;
+
+              return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(full)}&referer=${encodeURIComponent(customReferer || referer)}"`;
+            }
+          );
+        }
+
+        // Preserve HLS comments
+        if (
+          t.startsWith('#')
+        ) {
+          return line;
+        }
+
+        // Rewrite media segment URLs
+        if (t) {
+
+          const full =
+            t.startsWith('http')
+              ? t
+              : baseUrl + t;
+
+          return `https://${req.get('host')}/proxy?url=${encodeURIComponent(full)}&referer=${encodeURIComponent(customReferer || referer)}`;
+        }
+
+        return line;
+
+      })
+      .join('\n');
 
   res.setHeader(
     'Content-Type',
@@ -299,7 +359,7 @@ if (
     'no-store'
   );
 
-  return res.send(response.data);
+  return res.send(modified);
 }
 
       // Stream TS / KEY files
