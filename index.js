@@ -220,8 +220,8 @@ app.get('/proxy', async (req, res) => {
     },
 
     timeout: 30000,
-
     maxRedirects: 5,
+    validateStatus: () => true,
   });
     
     const contentType =
