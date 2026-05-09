@@ -276,80 +276,12 @@ app.get('/proxy', async (req, res) => {
       );
 
     // Handle playlists
+
+    // Directly return playlists
 if (
   contentType.includes('mpegurl') ||
   url.includes('.m3u8')
 ) {
-
-  const content =
-    response.data;
-
-  console.log(
-    '[M3U8 CONTENT]',
-    String(content).slice(0, 200)
-  );
-
-  const baseUrl =
-    url.substring(
-      0,
-      url.lastIndexOf('/') + 1
-    );
-
-  const modified =
-    String(content)
-      .split('\n')
-      .map(line => {
-
-        const t =
-          line.trim();
-
-        // HLS tags
-        if (t.startsWith('#')) {
-
-          // Rewrite AES key URIs
-          if (t.includes('URI="')) {
-
-            return t.replace(
-              /URI="([^"]+)"/,
-              (match, uri) => {
-
-                let fullUrl =
-                  uri;
-
-                if (!uri.startsWith('http')) {
-                  fullUrl =
-                    baseUrl + uri;
-                }
-
-                return `URI="https://${req.get('host')}/proxy?url=${encodeURIComponent(fullUrl)}"`;
-              }
-            );
-          }
-
-          return line;
-        }
-
-        // Relative chunk URLs
-        if (
-          t &&
-          !t.startsWith('http')
-        ) {
-
-          return `https://${req.get('host')}/proxy?url=${encodeURIComponent(baseUrl + t)}`;
-        }
-
-        // Absolute chunk URLs
-        if (
-          t.startsWith('http')
-        ) {
-
-          return `https://${req.get('host')}/proxy?url=${encodeURIComponent(t)}`;
-        }
-
-        return line;
-
-      })
-      .join('\n');
 
   res.setHeader(
     'Content-Type',
@@ -363,27 +295,11 @@ if (
 
   res.setHeader(
     'Cache-Control',
-    'no-store, no-cache, must-revalidate, proxy-revalidate'
-  );
-
-  res.setHeader(
-    'Pragma',
-    'no-cache'
-  );
-
-  res.setHeader(
-    'Expires',
-    '0'
-  );
-
-  res.setHeader(
-    'Surrogate-Control',
     'no-store'
   );
 
-  res.send(modified);
-
-} else {
+  return res.send(response.data);
+}
 
       // Stream TS / KEY files
       res.setHeader(
@@ -485,4 +401,4 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Animepahe API server running on port ${PORT}`);
   });
-      }
+  
