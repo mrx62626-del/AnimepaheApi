@@ -195,9 +195,15 @@ app.get('/proxy', async (req, res) => {
 
     let response;
 
-if (isKeyRequest) {
+const response =
+  await axios.get(url, {
 
-  response = await fetch(url, {
+    decompress: false,
+
+    responseType:
+      url.includes('.m3u8')
+        ? 'text'
+        : 'arraybuffer',
 
     headers: {
 
@@ -207,15 +213,21 @@ if (isKeyRequest) {
       'Referer':
         referer,
 
-      'Sec-Fetch-Site':
-        'same-site',
+      'Accept':
+        '*/*',
 
-      'Accept-Encoding':
-        'identity',
-    }
+      ...(url.includes('.m3u8')
+        ? {}
+        : {
+            'Range':
+              req.headers.range || 'bytes=0-'
+          }),
+    },
+
+    timeout: 30000,
+
+    maxRedirects: 5,
   });
-
-} else {
 
   response = await axios.get(url, {
 
@@ -272,25 +284,21 @@ if (isKeyRequest) {
   });
 }
 
-    if (isKeyRequest) {
+    res.status(response.status);
 
-  const buffer =
-    Buffer.from(
-      await response.arrayBuffer()
-    );
+res.setHeader(
+  'Content-Type',
+  contentType
+);
 
-  res.setHeader(
-    'Content-Type',
-    'application/octet-stream'
-  );
+res.setHeader(
+  'Access-Control-Allow-Origin',
+  '*'
+);
 
-  res.setHeader(
-    'Access-Control-Allow-Origin',
-    '*'
-  );
-
-  return res.send(buffer);
-}
+res.end(
+  Buffer.from(response.data)
+);
     
     const contentType =
       response.headers['content-type'] ||
