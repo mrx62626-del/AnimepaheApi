@@ -211,12 +211,12 @@ app.get('/proxy', async (req, res) => {
       'Accept':
         '*/*',
 
-      ...(url.includes('.m3u8')
-        ? {}
-        : {
-            'Range':
-              req.headers.range || 'bytes=0-'
-          }),
+      ...(url.includes('.m3u8') || url.includes('.key')
+          ? {}
+          : {
+              'Range':
+                req.headers.range || 'bytes=0-'
+            }),
     },
 
     timeout: 30000,
