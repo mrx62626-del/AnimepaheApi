@@ -190,9 +190,6 @@ app.get('/proxy', async (req, res) => {
       customReferer ||
       `${urlObj.protocol}//${urlObj.host}/`;
 
-    const isKeyRequest =
-      url.includes('.key');
-
   const response =
   await axios.get(url, {
 
@@ -324,42 +321,33 @@ if (
 }
 
       // Stream TS / KEY files
-    
-      res.setHeader(
-        'Content-Type',
-        contentType
-      );
 
-      res.setHeader(
-        'Access-Control-Allow-Origin',
-        '*'
-      );
+    // Stream TS / KEY files
 
-      res.setHeader(
-        'Accept-Ranges',
-        'bytes'
-      );
+res.status(response.status);
 
-      if (response.headers['content-length']) {
-        res.setHeader(
-          'Content-Length',
-          response.headers['content-length']
-        );
-      }
+res.setHeader(
+  'Content-Type',
+  contentType
+);
 
-      if (response.headers['content-range']) {
-        res.setHeader(
-          'Content-Range',
-          response.headers['content-range']
-        );
-      }
+res.setHeader(
+  'Access-Control-Allow-Origin',
+  '*'
+);
 
-      res.status(response.status);
+if (
+  response.headers['content-length']
+) {
+  res.setHeader(
+    'Content-Length',
+    response.headers['content-length']
+  );
+}
 
-  const buffer =
-  Buffer.from(response.data);
-
-res.end(buffer);
+return res.send(
+  Buffer.from(response.data)
+);
 
   } catch (error) {
 
