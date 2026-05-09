@@ -401,3 +401,4 @@ if (require.main === module) {
     console.log(`Animepahe API server running on port ${PORT}`);
   });
   
+}
