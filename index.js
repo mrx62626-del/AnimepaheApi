@@ -344,7 +344,6 @@ if (
       );
 
       response.data.pipe(res);
-    }
 
   } catch (error) {
 
