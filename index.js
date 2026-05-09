@@ -248,8 +248,12 @@ app.get('/proxy', async (req, res) => {
           'Connection':
             'keep-alive',
 
-          'Range':
-            req.headers.range || 'bytes=0-'
+          ...(isKeyRequest
+              ? {}
+              : {
+                  'Range':
+                    req.headers.range || 'bytes=0-'
+                }),
         },
 
         responseType:
