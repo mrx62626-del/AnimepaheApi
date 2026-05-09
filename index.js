@@ -206,6 +206,12 @@ if (isKeyRequest) {
 
       'Referer':
         referer,
+
+      'Sec-Fetch-Site':
+        'same-site',
+
+      'Accept-Encoding':
+        'identity',
     }
   });
 
@@ -224,6 +230,12 @@ if (isKeyRequest) {
 
       'Referer':
         referer,
+      
+      'Sec-Fetch-Site':
+        'same-site',
+
+      'Accept-Encoding':
+        'identity',
 
       'Accept':
         '*/*',
