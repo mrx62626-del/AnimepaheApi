@@ -420,29 +420,10 @@ if (
 
       res.status(response.status);
 
-    const chunks = [];
-
-response.data.on('data', chunk => {
-  chunks.push(chunk);
-});
-
-response.data.on('end', () => {
-
   const buffer =
-    Buffer.concat(chunks);
+  Buffer.from(response.data);
 
-  res.end(buffer);
-});
-
-response.data.on('error', err => {
-
-  console.error(
-    'Stream pipe error:',
-    err
-  );
-
-  res.end();
-});
+res.end(buffer);
 
   } catch (error) {
 
