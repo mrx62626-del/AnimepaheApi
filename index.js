@@ -193,7 +193,6 @@ app.get('/proxy', async (req, res) => {
     const isKeyRequest =
       url.includes('.key');
 
-    let response;
 
 const response =
   await axios.get(url, {
