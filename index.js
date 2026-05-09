@@ -193,80 +193,93 @@ app.get('/proxy', async (req, res) => {
     const isKeyRequest =
       url.includes('.key');
 
-    const response =
-      await axios.get(url, {
+    let response;
 
-        withCredentials: true,
+if (isKeyRequest) {
 
-        decompress: true,
+  response = await fetch(url, {
 
-        headers: {
+    headers: {
 
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
 
-          'Referer':
-            referer,
+      'Referer':
+        referer,
+    }
+  });
 
-          'Accept':
-            isKeyRequest
-              ? 'application/octet-stream,*/*'
-              : '*/*',
+} else {
 
-          'Accept-Language':
-            'en-US,en;q=0.9',
+  response = await axios.get(url, {
 
-          'Cache-Control':
-            'no-cache',
+    withCredentials: true,
 
-          'Pragma':
-            'no-cache',
+    decompress: true,
 
-          'Sec-Ch-Ua':
-            '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+    headers: {
 
-          'Sec-Ch-Ua-Mobile':
-            '?0',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
 
-          'Sec-Ch-Ua-Platform':
-            '"Windows"',
+      'Referer':
+        referer,
 
-          'Sec-Fetch-Dest':
-            isKeyRequest
-              ? 'empty'
-              : 'video',
+      'Accept':
+        '*/*',
 
-          'Sec-Fetch-Mode':
-            'cors',
+      'Accept-Language':
+        'en-US,en;q=0.9',
 
-          'Sec-Fetch-Site':
-            'cross-site',
+      'Cache-Control':
+        'no-cache',
 
-          'Connection':
-            'keep-alive',
+      'Pragma':
+        'no-cache',
 
-          ...(isKeyRequest
-              ? {}
-              : {
-                  'Range':
-                    req.headers.range || 'bytes=0-'
-                }),
-        },
+      ...(url.includes('.m3u8')
+        ? {}
+        : {
+            'Range':
+              req.headers.range || 'bytes=0-'
+          }),
+    },
 
-        responseType:
-          url.includes('.m3u8')
-            ? 'text'
-            : 'stream',
+    responseType:
+      url.includes('.m3u8')
+        ? 'text'
+        : 'stream',
 
-        timeout: 30000,
+    timeout: 30000,
 
-        maxRedirects: 5,
+    maxRedirects: 5,
 
-        validateStatus: status =>
-          status >= 200 &&
-          status < 500
-      });
+    validateStatus: status =>
+      status >= 200 &&
+      status < 500
+  });
+}
 
+    if (isKeyRequest) {
+
+  const buffer =
+    Buffer.from(
+      await response.arrayBuffer()
+    );
+
+  res.setHeader(
+    'Content-Type',
+    'application/octet-stream'
+  );
+
+  res.setHeader(
+    'Access-Control-Allow-Origin',
+    '*'
+  );
+
+  return res.send(buffer);
+}
+    
     const contentType =
       response.headers['content-type'] ||
       (
