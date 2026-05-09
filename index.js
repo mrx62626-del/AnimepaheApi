@@ -193,8 +193,7 @@ app.get('/proxy', async (req, res) => {
     const isKeyRequest =
       url.includes('.key');
 
-
-const response =
+  const response =
   await axios.get(url, {
 
     decompress: false,
@@ -227,77 +226,6 @@ const response =
 
     maxRedirects: 5,
   });
-
-  response = await axios.get(url, {
-
-    withCredentials: true,
-
-    decompress: true,
-
-    headers: {
-
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
-
-      'Referer':
-        referer,
-      
-      'Sec-Fetch-Site':
-        'same-site',
-
-      'Accept-Encoding':
-        'identity',
-
-      'Accept':
-        '*/*',
-
-      'Accept-Language':
-        'en-US,en;q=0.9',
-
-      'Cache-Control':
-        'no-cache',
-
-      'Pragma':
-        'no-cache',
-
-      ...(url.includes('.m3u8')
-        ? {}
-        : {
-            'Range':
-              req.headers.range || 'bytes=0-'
-          }),
-    },
-
-    responseType:
-      url.includes('.m3u8')
-        ? 'text'
-        : 'arraybuffer',
-
-    timeout: 30000,
-
-    maxRedirects: 5,
-
-    validateStatus: status =>
-      status >= 200 &&
-      status < 500
-  });
-}
-
-    res.status(response.status);
-
-res.setHeader(
-  'Content-Type',
-  contentType
-);
-
-res.setHeader(
-  'Access-Control-Allow-Origin',
-  '*'
-);
-
-res.end(
-  Buffer.from(response.data)
-);
     
     const contentType =
       response.headers['content-type'] ||
@@ -396,6 +324,14 @@ if (
 }
 
       // Stream TS / KEY files
+
+    res.status(response.status);
+
+    const buffer =
+      Buffer.from(response.data);
+    
+    res.end(buffer);
+    
       res.setHeader(
         'Content-Type',
         contentType
