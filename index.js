@@ -197,7 +197,7 @@ app.get('/proxy', async (req, res) => {
 
         withCredentials: true,
 
-        decompress: false,
+        decompress: true,
 
         headers: {
 
