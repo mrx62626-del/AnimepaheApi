@@ -324,13 +324,6 @@ if (
 }
 
       // Stream TS / KEY files
-
-    res.status(response.status);
-
-    const buffer =
-      Buffer.from(response.data);
-    
-    res.end(buffer);
     
       res.setHeader(
         'Content-Type',
